@@ -339,11 +339,15 @@ def get_package(namespace_name, package_name):
             "name": package["name"],
             "namespace": namespace["namespace"],
             "description": package["description"],
-            "latest_version": package["versions"][-1]["version"],
-            "latest_tarball": package["versions"][-1]["tarball"],
+            "latest_version_data": {
+                "dependencies": package["versions"][-1]["dependencies"],
+                "version": package["versions"][-1]["version"],
+                "tarball": package["versions"][-1]["tarball"],
+                "isDeprecated": package["versions"][-1]["isDeprecated"],
+            }
         }
 
-        return jsonify({"package": package}), 200
+        return jsonify({"data": package, "code": 200}), 200
         
 
 @app.route("/packages/<namespace_name>/<package_name>/<version>", methods=["GET"])
@@ -383,7 +387,7 @@ def get_package_from_version(namespace_name, package_name, version):
         package_response_data = {
             "name": package["name"],
             "namespace": namespace["namespace"],
-            "author": package_author["name"],
+            "author": package_author["username"],
             "tags": package["tags"],
             "license": package["license"],
             "createdAt": package["createdAt"],

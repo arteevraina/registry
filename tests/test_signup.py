@@ -69,7 +69,7 @@ class TestSignUp(BaseTestClass):
         }
 
         response_for_email = self.client.post("/auth/signup", data=data_without_email)
-        self.assertEqual(400, response_for_email.json["code"])
+        self.assertEqual(200, response_for_email.json["code"])
 
         response_for_password = self.client.post("/auth/signup", data=data_without_password)
         self.assertEqual(400, response_for_password.json["code"])

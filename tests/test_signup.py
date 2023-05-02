@@ -57,7 +57,7 @@ class TestSignUp(BaseTestClass):
         }
 
         data_without_password = {
-            "email": email,
+            "emil": email,
             "password": "",
             "username": username
         }

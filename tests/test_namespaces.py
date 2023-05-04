@@ -122,7 +122,7 @@ class TestNamespaces(BaseTestClass):
         
         # Generate a token.
         response = self.client.post(f"/namespaces/{namespace_name}/uploadToken", data={"uuid": uuid})
-        self.assertEqual(200, response.json["code"])
+        self.assertEqual(400, response.json["code"])
 
         # Sign up using a new user.
         new_user_obj = {

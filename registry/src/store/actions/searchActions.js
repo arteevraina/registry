@@ -1,8 +1,8 @@
 import axios from "axios";
 
-export const SEARCH_PACKAGE = "SEARCH_PACKAGE";
 export const SEARCH_SUCCESS = "SEARCH_SUCCESS";
 export const SEARCH_FAILURE = "SEARCH_FAILURE";
+export const SEARCH_LOADING = "SEARCH_LOADING";
 
 const sortedByMap = new Map()
   .set("Date last updated", "updatedat")
@@ -11,6 +11,9 @@ const sortedByMap = new Map()
 export const searchPackage =
   (query, page, sortedBy = "") =>
   async (dispatch) => {
+    dispatch({
+      type: SEARCH_LOADING,
+    });
     if (sortedBy.length !== 0) {
       sortedBy = sortedByMap.get(sortedBy);
     }
@@ -22,7 +25,7 @@ export const searchPackage =
     )}&sorted_by=${encodeURIComponent(sortedBy)}`;
 
     dispatch({
-      type: SEARCH_PACKAGE,
+      type: SEARCH_LOADING,
     });
 
     try {

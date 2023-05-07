@@ -1,31 +1,27 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCookies } from "react-cookie";
 import { useDispatch, useSelector } from "react-redux";
 import { login, resetErrorMessage } from "../store/actions/authActions";
 import { Link } from "react-router-dom";
 import Container from "react-bootstrap/Container";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [user_identifier, setUser_identifier] = useState("");
   const [password, setPassword] = useState("");
-  const [cookies, setCookie] = useCookies(["uuid"]);
   const [fromValidationErrors, setFormValidationError] = useState({});
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const errorMessage = useSelector((state) => state.auth.error);
-  const uuid = useSelector((state) => state.auth.uuid);
 
   useEffect(() => {
     if (isAuthenticated) {
-      setCookie("uuid", uuid);
       navigate("/manage/projects");
       window.location.reload();
     }
 
-    if (errorMessage != null) {
+    if (errorMessage !== null) {
       dispatch(resetErrorMessage());
     }
   }, [isAuthenticated]);
@@ -33,8 +29,8 @@ const Login = () => {
   const validateForm = () => {
     let errors = {};
 
-    if (!email) {
-      errors.email = "Email is required";
+    if (!user_identifier) {
+      errors.user_identifier = "Email is required";
     }
 
     if (!password) {
@@ -49,7 +45,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
-      dispatch(login(email, password));
+      dispatch(login(user_identifier, password));
     }
   };
 
@@ -57,16 +53,16 @@ const Login = () => {
     <Container style={{ paddingTop: 25 }}>
       <form id="login-form" onSubmit={handleSubmit}>
         <h1>Welcome to fpm Registry!</h1>
-        <p>Please enter your email and password to log in.</p>
+        <p>Please enter your username/email and password to log in.</p>
         <input
-          type="email"
-          name="email"
+          type="user_identifier"
+          name="user_identifier"
           placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          value={user_identifier}
+          onChange={(e) => setUser_identifier(e.target.value)}
         />
-        {fromValidationErrors.email && (
-          <p className="error">{fromValidationErrors.email}</p>
+        {fromValidationErrors.user_identifier && (
+          <p className="error">{fromValidationErrors.user_identifier}</p>
         )}
         <input
           type="password"

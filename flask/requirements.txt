@@ -1,8 +1,10 @@
 pymongo
-flask
+flask==2.2.4
 python-dateutil
 python-dotenv
 bcrypt
 flask_cors
 flasgger
 license-expression
+semantic-version
+docker

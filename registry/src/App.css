@@ -126,3 +126,24 @@ body {
 #navbar-container {
   width: 80%;
 }
+
+#dashboard-card {
+  margin-bottom: 1em;
+}
+
+.chip-action {
+    text-align: left;
+    font-size: 16;
+    cursor: pointer;
+    padding: 8px;
+    width: fit-content;
+    margin: 4px 4px 0px 0px;
+}
+
+.chip-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+}

@@ -8,8 +8,8 @@ import Figure from "react-bootstrap/Figure";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Spinner from "react-bootstrap/Spinner";
-import "./upload.css";
 import PackageItem from "../components/packageItem";
+import "./upload.css";
 
 
 const NamespacePage = () => {
@@ -50,7 +50,7 @@ const NamespacePage = () => {
               {" Namespace: " + namespace}
               </MDBIcon>
             <MDBIcon style={{ marginTop: "5px" }} far icon="calendar-alt">
-              {" Joined " + Date(dateJoined).slice(4, 15)}
+              {" Created " + Date(dateJoined).slice(4, 15)}
             </MDBIcon>
 
           </Row>

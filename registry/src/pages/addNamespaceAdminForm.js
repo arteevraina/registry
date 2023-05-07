@@ -1,23 +1,22 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
+import Button from "react-bootstrap/Button";
 import {
-  generateToken,
+  addNamespaceAdmin,
   resetMessages,
-} from "../store/actions/generateNamespaceTokenActions";
+} from "../store/actions/namespaceAdminsActions";
 
-const GenerateNamespaceTokenDialogForm = (props) => {
+const AddNamespaceAdminFormDialog = (props) => {
+  const [username, setUsername] = useState("");
   const [validationError, setValidationError] = useState("");
+  const currUsername = useSelector((state) => state.auth.username);
   const uuid = useSelector((state) => state.auth.uuid);
   const successMessage = useSelector(
-    (state) => state.generateNamespaceToken.successMessage
+    (state) => state.addRemoveNamespaceAdmin.successMessage
   );
   const errorMessage = useSelector(
-    (state) => state.generateNamespaceToken.errorMessage
-  );
-  const uploadToken = useSelector(
-    (state) => state.generateNamespaceToken.uploadToken
+    (state) => state.addRemoveNamespaceAdmin.errorMessage
   );
 
   const dispatch = useDispatch();
@@ -32,21 +31,26 @@ const GenerateNamespaceTokenDialogForm = (props) => {
     }
 
     dispatch(
-      generateToken({
-        uuid: uuid,
-        namespace: props.namespace,
-      })
+      addNamespaceAdmin(
+        {
+          uuid: uuid,
+          namespace: props.namespace,
+          username_to_be_added: username,
+        },
+        currUsername
+      )
     );
   };
 
   const resetData = () => {
+    setUsername("");
     setValidationError("");
     dispatch(resetMessages());
   };
 
   const validateForm = () => {
-    if (!uuid) {
-      setValidationError("uuid is required");
+    if (!username) {
+      setValidationError("Username is required");
       return false;
     }
 
@@ -65,24 +69,30 @@ const GenerateNamespaceTokenDialogForm = (props) => {
       >
         <Modal.Header closeButton>
           <Modal.Title id="contained-modal-title-vcenter">
-            Generate token
+            Add namespace admin
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Generate a namespace token for {props.namespace}
+          <label>Enter username</label>
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={username}
+            id="add-maintainer-input"
+            onChange={(e) => setUsername(e.target.value)}
+          />
           {validationError && (
             <p id="add-maintainer-error">{validationError}</p>
           )}
           {successMessage && (
-            <p id="add-maintainer-success">
-              {successMessage}: {uploadToken}
-            </p>
+            <p id="add-maintainer-success">{successMessage}</p>
           )}
           {errorMessage && <p id="add-maintainer-error">{errorMessage}</p>}
         </Modal.Body>
         <Modal.Footer>
           <Button variant="success" onClick={onSubmit}>
-            Generate Token
+            Add
           </Button>
         </Modal.Footer>
       </Modal>
@@ -90,4 +100,4 @@ const GenerateNamespaceTokenDialogForm = (props) => {
   );
 };
 
-export default GenerateNamespaceTokenDialogForm;
+export default AddNamespaceAdminFormDialog;

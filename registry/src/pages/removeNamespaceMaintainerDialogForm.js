@@ -1,23 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import {
-  generateToken,
+  removeNamespaceMaintainer,
   resetMessages,
-} from "../store/actions/generateNamespaceTokenActions";
+} from "../store/actions/namespaceMaintainersActions";
 
-const GenerateNamespaceTokenDialogForm = (props) => {
+const RemoveNamespaceMaintainerFormDialog = (props) => {
+  const [username, setUsername] = useState("");
   const [validationError, setValidationError] = useState("");
+  const currUsername = useSelector((state) => state.auth.username);
   const uuid = useSelector((state) => state.auth.uuid);
   const successMessage = useSelector(
-    (state) => state.generateNamespaceToken.successMessage
+    (state) => state.addRemoveNamespaceMaintainer.successMessage
   );
   const errorMessage = useSelector(
-    (state) => state.generateNamespaceToken.errorMessage
-  );
-  const uploadToken = useSelector(
-    (state) => state.generateNamespaceToken.uploadToken
+    (state) => state.addRemoveNamespaceMaintainer.errorMessage
   );
 
   const dispatch = useDispatch();
@@ -32,21 +31,27 @@ const GenerateNamespaceTokenDialogForm = (props) => {
     }
 
     dispatch(
-      generateToken({
-        uuid: uuid,
-        namespace: props.namespace,
-      })
+      removeNamespaceMaintainer(
+        {
+          uuid: uuid,
+          namespace: props.namespace,
+          username_to_be_removed: username,
+          package: props.package,
+        },
+        currUsername
+      )
     );
   };
 
   const resetData = () => {
+    setUsername("");
     setValidationError("");
     dispatch(resetMessages());
   };
 
   const validateForm = () => {
-    if (!uuid) {
-      setValidationError("uuid is required");
+    if (!username) {
+      setValidationError("Username is required");
       return false;
     }
 
@@ -65,24 +70,30 @@ const GenerateNamespaceTokenDialogForm = (props) => {
       >
         <Modal.Header closeButton>
           <Modal.Title id="contained-modal-title-vcenter">
-            Generate token
+            Remove namespace maintainer
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Generate a namespace token for {props.namespace}
+          <label>Enter username</label>
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={username}
+            id="add-maintainer-input"
+            onChange={(e) => setUsername(e.target.value)}
+          />
           {validationError && (
             <p id="add-maintainer-error">{validationError}</p>
           )}
           {successMessage && (
-            <p id="add-maintainer-success">
-              {successMessage}: {uploadToken}
-            </p>
+            <p id="add-maintainer-success">{successMessage}</p>
           )}
           {errorMessage && <p id="add-maintainer-error">{errorMessage}</p>}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="success" onClick={onSubmit}>
-            Generate Token
+          <Button variant="danger" onClick={onSubmit}>
+            Remove
           </Button>
         </Modal.Footer>
       </Modal>
@@ -90,4 +101,4 @@ const GenerateNamespaceTokenDialogForm = (props) => {
   );
 };
 
-export default GenerateNamespaceTokenDialogForm;
+export default RemoveNamespaceMaintainerFormDialog;

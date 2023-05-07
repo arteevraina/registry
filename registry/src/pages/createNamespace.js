@@ -1,22 +1,52 @@
-import React, { useState } from "react";
-import { useCookies } from "react-cookie";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { createNamespace } from "../store/actions/createNamespaceActions";
-import Container from "react-bootstrap/Container";
 import Spinner from "react-bootstrap/Spinner";
-import "./upload.css";
+import Button from "react-bootstrap/Button";
+import Form from "react-bootstrap/Form";
+import { Card } from "react-bootstrap";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const NamespaceForm = () => {
-  const [cookies, setCookie] = useCookies(["uuid"]);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const uuid = useSelector((state) => state.auth.uuid);
   const isLoading = useSelector((state) => state.createNamespace.isLoading);
   const message = useSelector((state) => state.createNamespace.message);
   const statuscode = useSelector((state) => state.createNamespace.statuscode);
+  const toast_css = {
+    position: "top-center",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme: "light",
+  };
+
+  useEffect(() => {
+    if (statuscode === 200) {
+      toast.success(message, {
+        onClose: () => navigate("/manage/projects")
+      });
+    } else if (statuscode !== 0 && statuscode !== 200) {
+      toast.error(message, toast_css);
+    }
+  }, [statuscode]);
+
+  useEffect(() => {
+    if (uuid === null) {
+      navigate("/");
+    }
+  }, [uuid]);
 
   const [data, setData] = useState({
     namespace: "",
     namespace_description: "",
-    uuid: cookies.uuid,
+    uuid: uuid,
   });
 
   const handleChange = (event) => {
@@ -26,54 +56,72 @@ const NamespaceForm = () => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    dispatch(createNamespace(event.target));
+    dispatch(createNamespace(data));
   };
 
   return !isLoading ? (
-    <Container style={{ padding: 20 }}>
-      <h2>Create a Namespace</h2>
-      <form id="package-form" onSubmit={handleSubmit}>
-        <label htmlFor="namespace">Namespace:</label>
-        <input
-          type="text"
-          id="namespace"
-          name="namespace"
-          value={data.namespace}
-          onChange={handleChange}
-        />
-        <br />
+    <Card id="create-namespace-card">
+      <h3>Create a namespace</h3>
+      <ToastContainer
+        position="top-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        pauseOnHover
+        theme="light"
+      />
+      <Form onSubmit={handleSubmit}>
+        <Form.Group
+          className="mb-3"
+          controlId="formNamespaceName"
+          id="namespace-name-textfield"
+        >
+          <Form.Label>Namespace:</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Enter namespace"
+            value={data.namespace}
+            name="namespace"
+            onChange={handleChange}
+          />
+          <Form.Text className="text-muted">
+            Write a unique namespace name.
+          </Form.Text>
+        </Form.Group>
 
-        <label htmlFor="namespace_description">Namespace Description:</label>
-        <textarea
-          id="namespace_description"
-          name="namespace_description"
-          value={data.namespace_description}
-          onChange={handleChange}
-        />
-        <br />
+        <Form.Group
+          className="mb-3"
+          controlId="formNamespaceDescription"
+          id="namespace-description-textfield"
+        >
+          <Form.Label>Namespace description:</Form.Label>
+          <Form.Control
+            type="text"
+            placeholder="Enter namespace description"
+            as="textarea"
+            name="namespace_description"
+            value={data.namespace_description}
+            onChange={handleChange}
+          />
+          <Form.Text className="text-muted">
+            Write a brief namespace description.
+          </Form.Text>
+        </Form.Group>
 
-        <input
-          type="hidden"
-          id="uuid"
-          name="uuid"
-          value={cookies.uuid}
-          onChange={handleChange}
-        />
-        <br />
-        {statuscode === 200 ? (
-          <Container className="success">{message}</Container>
-        ) : (
-          <Container className="error">{message}</Container>
-        )}
-        <button type="submit">Create Namespace</button>
-      </form>
-    </Container>
+        <Button variant="primary" type="submit" id="namespace-submit-btn">
+          Submit
+        </Button>
+      </Form>
+    </Card>
   ) : (
-    <Container style={{ margin: "200px" }}>
-      <Spinner animation="border" role="status">
+    <div className="d-flex justify-content-center">
+      <Spinner className="spinner-border m-5" animation="border" role="status">
         <span className="visually-hidden">Loading...</span>
       </Spinner>
-    </Container>
+    </div>
   );
 };
 

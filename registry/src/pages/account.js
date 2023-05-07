@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useCookies } from "react-cookie";
 import { useNavigate } from "react-router-dom";
 import {
   reset,
   getUserAccount,
-  deleteAccount,
+  resetMessages,
 } from "../store/actions/accountActions";
-import { fetchPackages } from "../store/actions/dashboardActions";
+
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
-import { MDBIcon } from "mdbreact";
-import { MDBBtn } from "mdb-react-ui-kit";
 import Image from "react-bootstrap/Image";
 import Table from "react-bootstrap/Table";
 import Spinner from "react-bootstrap/Spinner";
@@ -26,42 +23,62 @@ import "mdbreact/dist/css/mdb.css";
 const Account = () => {
   const email = useSelector((state) => state.account.email);
   const error = useSelector((state) => state.account.error);
-  const [password, setPassword] = useState("");
-  const [oldpassword, setOldpassword] = useState("");
-  const [Newpassword, setNewpassword] = useState("");
+  const successMsg = useSelector(
+    (state) => state.account.resetPasswordSuccessMsg
+  );
+  const [oldPassword, setoldPassword] = useState("");
+  const [newPassword, setnewPassword] = useState("");
+  const [fromValidationErrors, setFormValidationError] = useState({});
   const [show, setShow] = useState(false);
   const dateJoined = useSelector((state) => state.account.dateJoined);
   const username = useSelector((state) => state.auth.username);
   const uuid = useSelector((state) => state.auth.uuid);
-  const packages = useSelector((state) => state.dashboard.packages);
-  const isLoading = useSelector((state) => state.dashboard.isLoading);
+  const isLoading = useSelector((state) => state.account.isLoading);
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (username === null) {
       navigate("/");
-    } else if (packages === null) {
-      dispatch(fetchPackages(username));
+    } else {
       dispatch(getUserAccount(uuid));
+    }
+
+    if (error !== null || successMsg !== null) {
+      resetMessages();
     }
   });
 
+  const validateForm = () => {
+    let errors = {};
+
+    if (!oldPassword) {
+      errors.password = "Old Password is required";
+    }
+    if (!newPassword) {
+      errors.password = "Enter New password";
+    }
+
+    setFormValidationError(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(reset(oldpassword, Newpassword, uuid));
+
+    if (validateForm()) {
+      dispatch(resetMessages());
+      dispatch(reset(oldPassword, newPassword, uuid));
+    }
     setShow(true);
   };
 
-  const handleDelete = async (e) => {
-    e.preventDefault();
-    dispatch(deleteAccount(password, uuid));
-  };
-
   return isLoading ? (
-    <Spinner animation="border" role="status">
-      <span className="visually-hidden">Loading...</span>
-    </Spinner>
+    <div className="d-flex justify-content-center">
+      <Spinner className="spinner-border m-5" animation="border" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </Spinner>
+    </div>
   ) : (
     <Container fluid="md" style={{ paddingTop: 25 }}>
       <Table>
@@ -81,8 +98,8 @@ const Account = () => {
               />
             </td>
             <td>
-              We use <a href="https://gravatar.com">gravatar.com</a> to generate your
-              profile picture based on your primary email address —
+              We use <a href="https://gravatar.com">gravatar.com</a> to generate
+              your profile picture based on your primary email address —
               <code className="break"> {email} </code>.
             </td>
           </tr>
@@ -122,10 +139,10 @@ const Account = () => {
             <Form.Control
               type="password"
               placeholder="Enter Old Password"
-              name="oldpassword"
-              value={oldpassword}
-              onChange={(e) => setOldpassword(e.target.value)}
-            />{" "}
+              name="oldPassword"
+              value={oldPassword}
+              onChange={(e) => setoldPassword(e.target.value)}
+            />
           </Col>
         </Form.Group>
 
@@ -138,59 +155,25 @@ const Account = () => {
               type="password"
               placeholder="Enter New Password"
               name="password"
-              value={Newpassword}
-              onChange={(e) => setNewpassword(e.target.value)}
+              value={newPassword}
+              onChange={(e) => setnewPassword(e.target.value)}
             />
           </Col>
         </Form.Group>
 
+        {fromValidationErrors.password && (
+          <p className="error">{fromValidationErrors.password}</p>
+        )}
+        <p className="success"> {successMsg}</p>
+        <p className="error">{error}</p>
         <Button variant="primary" type="submit">
           Submit
         </Button>
         <Form.Text id="error" className="text-muted">
-        {show && (error)}
+          {show && error}
         </Form.Text>
+
       </Form>
-      <Container>
-        <Table style={{ paddingTop: 15 }}>
-          <thead>
-            <h3>Delete account</h3>
-          </thead>
-          <tbody className="text-danger">
-            <tr>
-              <h5>Proceed with caution!</h5>
-            </tr>
-            <tr>
-              <h5>
-                <MDBIcon fas icon="exclamation-triangle" /> You will not be able
-                to recover your account after you delete it
-              </h5>
-            </tr>
-          </tbody>
-        </Table>
-        <Form onSubmit={handleDelete} className="text-danger">
-          <Form.Group as={Row} className="mb-4">
-            <Form.Label column sm="4">
-              Password
-            </Form.Label>
-            <Col sm="8">
-              <Form.Control
-                type="password"
-                placeholder="Enter Password"
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />{" "}
-            </Col>
-          </Form.Group>
-          <MDBBtn className="me-1" color="danger" type="submit">
-            Delete Account
-          </MDBBtn>
-          <Form.Text id="error" className="text-muted">
-            {!show && (error)}
-          </Form.Text>
-        </Form>
-      </Container>
     </Container>
   );
 };

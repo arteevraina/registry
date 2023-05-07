@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import Image from "react-bootstrap/Image";
 import Container from "react-bootstrap/Container";
@@ -13,7 +13,9 @@ const NavbarComponent = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  const location = useLocation();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const isAdmin = useSelector((state) => state.admin.isAdmin);
   const username = useSelector((state) => state.auth.username);
   const uuid = useSelector((state) => state.auth.uuid);
 
@@ -24,7 +26,12 @@ const NavbarComponent = () => {
   return (
     <Navbar bg="light" expand="md">
       <Container id="navbar-container">
-        <Navbar.Brand onClick={() => navigate("/")}>
+        <Navbar.Brand
+          onClick={() => navigate("/")}
+          style={{
+            cursor: "pointer",
+          }}
+        >
           <Image
             src="https://fortran-lang.org/en/_static/fortran-logo-256x256.png"
             fluid
@@ -34,34 +41,28 @@ const NavbarComponent = () => {
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="responsive-navbar-nav" />
         <Navbar.Collapse>
-          <div id="search-bar">
-            <SearchBar />
-          </div>
+          {location.pathname !== "/" ? (
+            <div id="search-bar">
+              <SearchBar />
+            </div>
+          ) : null}
           <Nav className="ml-auto">
             {!isAuthenticated && (
-              <Nav.Link onClick={() => navigate("/account/login")}>
-                Login
-              </Nav.Link>
-            )}
-            {!isAuthenticated && (
-              <Nav.Link onClick={() => navigate("/account/register")}>
-                Register
-              </Nav.Link>
+              <>
+                <Nav.Link onClick={() => navigate("/help")}>Help</Nav.Link>
+                <Nav.Link onClick={() => navigate("/account/login")}>
+                  Login
+                </Nav.Link>
+                <Nav.Link onClick={() => navigate("/account/register")}>
+                  Register
+                </Nav.Link>
+              </>
             )}
           </Nav>
 
           {isAuthenticated && (
             <Nav className="ml-auto">
               <NavDropdown title={username} className="d-flex">
-                <NavDropdown.Item
-                  onClick={() => {
-                    navigate("/package/create");
-                    window.location.reload();
-                  }}
-                >
-                  Create Package
-                </NavDropdown.Item>
-                
                 <NavDropdown.Item
                   onClick={() => {
                     navigate("/namespace/create");
@@ -77,16 +78,7 @@ const NavbarComponent = () => {
                     window.location.reload();
                   }}
                 >
-                  Packages
-                </NavDropdown.Item>
-
-                <NavDropdown.Item
-                  onClick={() => {
-                    navigate("/search");
-                    window.location.reload();
-                  }}
-                >
-                  Search
+                  Dashboard
                 </NavDropdown.Item>
 
                 <NavDropdown.Item
@@ -97,7 +89,21 @@ const NavbarComponent = () => {
                 >
                   Account
                 </NavDropdown.Item>
+                {isAdmin && (
+                  <NavDropdown.Item
+                    onClick={() => {
+                      navigate("/admin");
+                      window.location.reload();
+                    }}
+                  >
+                    Admin
+                  </NavDropdown.Item>
+                )}
+
                 <NavDropdown.Item onClick={signOut}>Logout</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => navigate("/help")}>
+                  Help
+                </NavDropdown.Item>
               </NavDropdown>
             </Nav>
           )}
@@ -121,14 +127,23 @@ const SearchBar = () => {
     }
   };
 
+  const handleKeyDown = event => { 
+    if (event.key === 'Enter') {
+      search();
+    }
+  };
+
   return (
-    <div className="d-flex">
+    <div className="d-flex" tabIndex={0} onKeyDown={handleKeyDown}>
       <input
         type="text"
         className="flex-fill form-control"
         placeholder="Search"
         value={query}
         onChange={(event) => dispatch(setQuery(event.target.value))}
+        style={{
+          borderRadius: "50px",
+        }}
       />
       <button className="btn btn-primary" onClick={search}>
         Search

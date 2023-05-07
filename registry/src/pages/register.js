@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useCookies } from "react-cookie";
 import { useDispatch, useSelector } from "react-redux";
 import { signup, resetErrorMessage } from "../store/actions/authActions";
 import { Link } from "react-router-dom";
@@ -10,14 +9,12 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-  const [cookies, setCookie] = useCookies(["uuid"]);
   const [fromValidationErrors, setFormValidationError] = useState({});
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const errorMessage = useSelector((state) => state.auth.error);
-  const uuid = useSelector((state) => state.auth.uuid);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,7 +25,6 @@ const Register = () => {
 
   useEffect(() => {
     if (isAuthenticated) {
-      setCookie("uuid", uuid);
       navigate("/manage/projects");
       window.location.reload();
     }

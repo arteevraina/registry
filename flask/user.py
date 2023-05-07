@@ -19,42 +19,97 @@ except KeyError as err:
 @app.route("/users/<username>", methods=["GET"])
 @swag_from("documentation/user.yaml", methods=["GET"])
 def profile(username):
-    user = db.users.find_one({"username": username})
-    if user:
+    user_doc = db.users.find_one({"username": username})
+    if user_doc:
+        # Get all the packages user is maintainer of.
         packages = db.packages.find(
-            {"$or": [{"author": user["_id"]}, {"maintainers": user["_id"]}]},
+            {"$or": [{"author": user_doc["_id"]}, {"maintainers": user_doc["_id"]}]},
         )
 
+        # Get all the namespaces user is maintainer/admin of.
+        # A namespace maintainer / admin will be maintainer of all the packages under that namespace.
         namespaces = db.namespaces.find(
-            {"$or": [{"author": user["_id"]}, {"maintainers": user["_id"]}, {"admins": user["_id"]}]},
+            {"$or": [{"author": user_doc["_id"]}, {"maintainers": user_doc["_id"]}, {"admins": user_doc["_id"]}]},
         )
 
         response_packages = []
         response_namespaces = []
+        
+        # Check if there are any namespaces user is maintainer of.
+        if namespaces:
+            # Iterate over all the namespaces and add it to the response_namespace.
+            for namespace in namespaces:
+                isNamespaceAdmin = False
+
+                # Check if the user is adming of the namespace.
+                if user_doc["_id"] in namespace["admins"]:
+                    isNamespaceAdmin = True
+
+                response_namespaces.append({
+                    "id": str(namespace["_id"]),
+                    "name": namespace["namespace"],
+                    "description": namespace["description"],
+                    "isNamespaceAdmin": isNamespaceAdmin
+                })
+
+                # Iterate over all the packages in the namespace.
+                # User is maintainer of all these packages.
+                # Add these packages to the response_packages.
+                for package_id in namespace["packages"]:
+                    package_doc = db.packages.find_one({"_id": package_id})
+
+                    response_packages.append({
+                        "id": str(package_doc["_id"]),
+                        "name": package_doc["name"],
+                        "namespace": namespace["namespace"],
+                        "description": package_doc["description"],
+                        "updatedAt": package_doc["updatedAt"],
+                        "isNamespaceMaintainer": True,
+                    })
+
+        # Check for the packages that user is maintainer of individually but not as namespace maintainer.
+        # If these packages are already not in the response then add it to the response_packages else skip the 
+        # duplicates.
         if packages:
             for package in packages:
+                isDuplicate = False
+
+                # Check if that package is already under a namespace.
+                # response_packages will contain a list of packages that user is maintainer of under a namespace.
+                for pkg in response_packages:
+                    
+                    if pkg["id"] == str(package["_id"]):
+                        isDuplicate = True
+                        break
+                
+                # Skip the duplicates.
+                if isDuplicate:
+                    continue
+                
                 # Get namespace from namespace id.
                 namespace = db.namespaces.find_one({"_id": package["namespace"]})
-                user = db.users.find_one({"_id": package["author"]})
+                
+                isNamespaceMaintainer = False
+
+                if user_doc["_id"] in namespace["maintainers"]:
+                    isNamespaceMaintainer = True
+
                 response_packages.append(
-                    {
+                    {   
+                        "id": str(package["_id"]),
                         "name": package["name"],
                         "namespace": namespace["namespace"],
                         "description": package["description"],
                         "updatedAt": package["updatedAt"],
+                        "isNamespaceMaintainer": isNamespaceMaintainer
                     }
                 )
                 
-        if namespaces:
-            for namespace in namespaces:
-                response_namespaces.append({
-                    "name": namespace["namespace"],
-                    "description": namespace["description"],
-                })
+        
         user_account = {
-            "username": user["username"],
-            "email": user["email"],
-            "createdAt": user["createdAt"],
+            "username": user_doc["username"],
+            "email": user_doc["email"],
+            "createdAt": user_doc["createdAt"],
         }
         return (
             jsonify(
@@ -76,7 +131,6 @@ def profile(username):
 @swag_from("documentation/delete_user.yaml", methods=["POST"])
 def delete_user():
     uuid = request.form.get("uuid")
-    password = request.form.get("password")
     username = request.form.get("username")
 
     if not uuid:
@@ -87,16 +141,7 @@ def delete_user():
     if not user:
         return "Invalid email or password", 401
 
-    if password:
-        password += salt
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        if hashed_password != user["password"]:
-            return jsonify({"message": "Invalid email or password", "code": 401}), 401
-        else:
-            db.users.delete_one({"uuid": uuid})
-            return jsonify({"message": "User deleted", "code": 200}), 200
-
-    elif username and "admin" in user["roles"]:
+    if username and "admin" in user["roles"]:
         delete_user = db.users.find_one({"username": username})
         if delete_user:
             db.users.delete_one({"username": username})
@@ -109,7 +154,6 @@ def delete_user():
 
 
 @app.route("/users/account", methods=["POST"])
-@swag_from("documentation/account.yaml", methods=["POST"])
 def account():
     uuid = request.form.get("uuid")
     if not uuid:
@@ -131,7 +175,6 @@ def account():
 
 
 @app.route("/users/admin", methods=["POST"])
-@swag_from("documentation/admin.yaml", methods=["POST"])
 def admin():
     uuid = request.form.get("uuid")
     if not uuid:
@@ -152,7 +195,6 @@ def admin():
 
 
 @app.route("/users/admin/transfer", methods=["POST"])
-@swag_from("documentation/admin.yaml", methods=["POST"])
 def transfer_account():
     uuid = request.form.get("uuid")
     if not uuid:
@@ -241,9 +283,11 @@ def add_maintainers_to_package(username):
         return jsonify({"message": "Package not found", "code": 404}), 404
 
     # Check if the current user has authority to add maintainers.
+    # Package maintainer, Namespace maintainer or Namespace admin has the authority to add package maintainers.
     if not checkIsMaintainer(
         user_id=user["_id"], package=curr_package
-    ) and not checkIsNamespaceAdmin(user_id=user["_id"], namespace=package_namespace):
+    ) and not checkIsNamespaceAdmin(user_id=user["_id"], namespace=package_namespace
+        ) and not checkIfNamespaceMaintainer(user_id=user["_id"], namespace=package_namespace):
         return jsonify({"message": "Unauthorized", "code": 401}), 401
 
     # Get the user to be added using the username received in the request body.
@@ -321,7 +365,9 @@ def remove_maintainers_from_package(username):
         return jsonify({"message": "Package not found", "code": 404}), 404
 
     # Check if the current user has authority to remove maintainers.
-    if not checkIsNamespaceAdmin(user_id=user["_id"], namespace=package_namespace):
+    # Package maintainer, Namespace maintainer or Namespace admin has the authority to remove package maintainers.
+    if not checkIsNamespaceAdmin(user_id=user["_id"], namespace=package_namespace
+        ) and not checkIfNamespaceMaintainer(user_id=user["_id"], namespace=package_namespace):
         return (
             jsonify(
                 {"message": "User is not authorized to remove maintainers", "code": 401}
@@ -484,7 +530,144 @@ def remove_maintainers_from_namespace(username):
         return jsonify({"message": "Maintainer removed successfully", "code": 200}), 200
     else:
         return jsonify({"message": "Namespace maintainer not found", "code": 200}), 200
+    
+@app.route("/<username>/namespace/admin", methods=["POST"])
+def add_admins_to_namespace(username):
+    uuid = request.form.get("uuid")
+    username_to_be_added = request.form.get("username")
+    namespace = request.form.get("namespace")
 
+    # Validating the data coming with request.
+    if not uuid:
+        return jsonify({"message": "Unauthorized", "code": 401}), 401
+    
+    if not username_to_be_added:
+        return (
+            jsonify(
+                {"message": "Please enter the username to be added", "code": 400}
+            ),
+            400,
+        )
+    
+    if not namespace:
+        return jsonify({"message": "Please enter the namespace name", "code": 400}), 400
+    
+    # Get the user from the database using uuid.
+    user = db.users.find_one({"uuid": uuid})
+
+    # Check if current user is authorized to access this API.
+    if not user or user["username"] != username:
+        return jsonify({"message": "Unauthorized", "code": 401}), 401
+    
+    # Get the namespace from the database.  
+    namespace_doc = db.namespaces.find_one({"namespace": namespace})
+
+    # Check if namespace does not exists.
+    if not namespace_doc:
+        return jsonify({"message": "Namespace not found", "code": 404}), 404
+    
+    # Only namespace admins can add new admins to the namespace or namespace authors have the authority to add admins.
+    if not checkIsNamespaceAdmin(user_id=user["_id"], namespace=namespace_doc) and not checkIfNamespaceAuthor(user_id=user["_id"], namespace=namespace_doc):
+        return (
+            jsonify(
+                {"message": "User is not authorized to add namespace admins", "code": 401}
+            ),
+            401,
+        )
+    
+    # Get the user to be added using the username received in the request body.
+    username_to_be_added = db.users.find_one({"username": username_to_be_added})
+
+    if not username_to_be_added:
+        return jsonify(
+            {"message": "Username to be added as a admin not found", "code": 404}
+        )
+    
+    # Update the document only if the user_to_be_added["_id"] is not already in the admins list.
+    result = db.namespaces.update_one(
+        {"namespace": namespace, "admins": {"$ne": username_to_be_added["_id"]}},
+        {"$addToSet": {"admins": username_to_be_added["_id"]}},
+    )
+
+    if result.modified_count > 0:
+        return jsonify({"message": "Admin added successfully", "code": 200}), 200
+    else:
+        return jsonify({"message": "Admin already added", "code": 200}), 200
+    
+@app.route("/<username>/namespace/admin/remove", methods=["POST"])
+def remove_admins_from_namespace(username):
+    uuid = request.form.get("uuid")
+    username_to_be_removed = request.form.get("username")
+    namespace = request.form.get("namespace")
+
+    # Validating the data coming with request.
+    if not uuid:
+        return jsonify({"message": "Unauthorized", "code": 401}), 401
+    
+    if not username_to_be_removed:
+        return (
+            jsonify(
+                {"message": "Please enter the username to be removed", "code": 400}
+            ),
+            400,
+        )
+    
+    if not namespace:
+        return jsonify({"message": "Please enter the namespace name", "code": 400}), 400
+    
+    # Get the user from the database using uuid.
+    user = db.users.find_one({"uuid": uuid})
+
+    # Check if current user is authorized to access this API.
+    if not user or user["username"] != username:
+        return jsonify({"message": "Unauthorized", "code": 401}), 401
+    
+    # Get the namespace from the database.
+    namespace_doc = db.namespaces.find_one({"namespace": namespace})
+
+    # Check if namespace does not exists.
+    if not namespace_doc:
+        return jsonify({"message": "Namespace not found", "code": 404}), 404
+    
+    # Check if the current user has authority to remove admins.
+    # Only namespace authors or admins can remove namespace admins.
+    if not checkIsNamespaceAdmin(user_id=user["_id"], namespace=namespace_doc) and not checkIfNamespaceAuthor(user_id=user["_id"], namespace=namespace_doc):
+        return (
+            jsonify(
+                {"message": "User is not authorized to remove admins", "code": 401}
+            ),
+            401,
+        )
+    
+    # Get the user to be removed using the username received in the request body.
+    username_to_be_removed = db.users.find_one({"username": username_to_be_removed})
+
+    if not username_to_be_removed:
+        return jsonify(
+            {"message": "Username to be removed as a admin not found", "code": 404}
+        )
+
+    # Check if a user is trying to remove original namespace author from admin role.
+    # Do not allow users to remove original namespace authors from admin role.
+    if str(namespace_doc["author"]) == str(username_to_be_removed["_id"]):
+        return jsonify({"code": 401, "message": "Namespace owners cannot be removed from admins"})
+
+    # Update the document only if the user_to_be_added["_id"] is not already in the admins list.
+    result = db.namespaces.update_one(
+        {"namespace": namespace, "admins": username_to_be_removed["_id"]},
+        {"$pull": {"admins": username_to_be_removed["_id"]}},
+    )
+
+    if result.modified_count > 0:
+        return jsonify({"message": "Admin removed successfully", "code": 200}), 200
+    else:
+        return jsonify({"message": "Admin already removed", "code": 200}), 200
+
+
+# This function checks if user is an author of a namespace.
+def checkIfNamespaceAuthor(user_id, namespace):
+    author_id = namespace["author"]
+    return user_id == author_id
 
 # This function checks if user is a maintainer of a namespace.
 def checkIfNamespaceMaintainer(user_id, namespace):

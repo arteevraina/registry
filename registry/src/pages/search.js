@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useEffect } from "react";
+import Spinner from "react-bootstrap/Spinner";
 import { useSelector, useDispatch } from "react-redux";
 import PackageItem from "../components/packageItem";
 import { MDBListGroup } from "mdbreact";
@@ -6,15 +7,18 @@ import Pagination from "../components/pagination";
 import Dropdown from "react-bootstrap/Dropdown";
 import DropdownButton from "react-bootstrap/DropdownButton";
 import { searchPackage, setOrderBy } from "../store/actions/searchActions";
+import { useNavigate } from "react-router-dom";
 
 const Search = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const packages = useSelector((state) => state.search.packages);
   const error = useSelector((state) => state.search.error);
   const totalPages = useSelector((state) => state.search.totalPages);
   const currentPage = useSelector((state) => state.search.currentPage);
   const orderBy = useSelector((state) => state.search.orderBy);
   const query = useSelector((state) => state.search.query);
+  const isLoading = useSelector((state) => state.search.isLoading);
 
   const dropdownOptions = ["None", "Date last updated"];
 
@@ -22,6 +26,26 @@ const Search = () => {
     dispatch(setOrderBy(option));
     dispatch(searchPackage(query, 0, option));
   };
+
+  useEffect(() => {
+    if (query.length === 0) {
+      navigate("/manage/projects");
+    }
+  }, [isLoading]);
+
+  if (isLoading) {
+    return (
+      <div className="d-flex justify-content-center">
+        <Spinner
+          className="spinner-border m-5"
+          animation="border"
+          role="status"
+        >
+          <span className="visually-hidden">Loading...</span>
+        </Spinner>
+      </div>
+    );
+  }
 
   if (error !== null) {
     return (
@@ -34,8 +58,14 @@ const Search = () => {
   if (packages !== null) {
     if (packages.length === 0) {
       return (
-        <div className="container">
-          <div>No packages found.</div>
+        <div
+          className="container alert alert-secondary"
+          style={{
+            marginTop: "1em",
+          }}
+          role="alert"
+        >
+          No package found.
         </div>
       );
     } else {

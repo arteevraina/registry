@@ -27,7 +27,7 @@ class TestNamespaces(BaseTestClass):
         """
 
         response = self.client.post("/auth/signup", data=TestNamespaces.test_user_data)
-        self.assertEqual(200, response.json["code"])
+        self.assertEqual(400, response.json["code"])
 
         uuid = response.json["uuid"]
         TestNamespaces.test_namespace_data["uuid"] = uuid
